@@ -1,12 +1,18 @@
 const express = require("express")
 const cors = require("cors");
+const authRoutes = require("./routes/auth-routes/authroutes");
 const mySqlPool = require("./db/db");
 
+
+const PORT = process.env.PORT || 5001;
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-const PORT = process.env.PORT || 5001;
+app.use(express.urlencoded({ extended: false }));
+
+app.use("/", authRoutes);
+
 
 mySqlPool.query("SELECT 1").then(() => {
 
