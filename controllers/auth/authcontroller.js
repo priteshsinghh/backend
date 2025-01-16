@@ -14,11 +14,8 @@ const generateAccessToken = (userId) => {
 //register controller
 
 const registerUser = async (req, res) => {
-    const { userName, email, password } = req.body;
-
-    if (!userName || !email || !password) {
-        return res.status(400).json({ message: "Fields cannot be empty" });
-    }
+    const { userName, email, password, phoneNumber, gender } = req.body;
+    const profilePic = req.file ? req.file.buffer : null; // Handle profile_pic from multer
 
     try {
         // Hash password
@@ -29,14 +26,17 @@ const registerUser = async (req, res) => {
             userName,
             email,
             password: hashPassword,
+            phoneNumber,
+            gender,
+            profilePic : profilePic,
         };
 
         // Create table and check if user exists
         await createTable(userSchema); 
-        const userAlreadyExists = await checkRecordExists("users", "email", email);
+        const userAlreadyExists = await checkRecordExists("users", ["email", "phoneNumber"] , [email, phoneNumber]);
 
         if (userAlreadyExists) {
-            return res.status(409).json({ message: "Email already exists" });
+            return res.status(409).json({ message: "User already exists" });
         }
 
         // Insert new user
@@ -53,19 +53,19 @@ const registerUser = async (req, res) => {
 
 //login controller
 const loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, phoneNumber, password } = req.body;
 
-    if (!email || !password) {
-        res.status(400).json({
+    if (!email && !phoneNumber || !password) {
+        return res.status(400).json({
             error: "this fields can not be empty"
 
         });
-        return;
+        
     }
 
     try {
 
-        const existingUser = await checkRecordExists("users", "email", email);
+        const existingUser = await checkRecordExists("users", ["email", "phoneNumber"], [email, phoneNumber]);
 
         if (existingUser) {
             if (!existingUser.password) {
@@ -82,6 +82,11 @@ const loginUser = async (req, res) => {
                 res.status(200).json({
                     userId: existingUser.userId,
                     email: existingUser.email,
+                    phoneNumber : existingUser.phoneNumber,
+                    gender : existingUser.gender,
+                    profilePic : existingUser.profilePic
+                    ? existingUser.profilePic.toString("base64") // Convert only if not null
+                    : null, // Convert buffer to base64 for response
                     access_token: generateAccessToken(existingUser.userId),
                 });
             } else {
