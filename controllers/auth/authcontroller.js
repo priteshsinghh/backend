@@ -42,6 +42,7 @@ const registerUser = async (req, res) => {
         // Insert new user
         await insertRecord("users", newUser);
         return res.status(201).json({ message: "User created successfully!" });
+        
     } catch (error) {
         console.error("Error in registerUser:", error.message);
         return res.status(500).json({ message: "An error occurred", error: error.message });
