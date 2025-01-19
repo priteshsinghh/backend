@@ -6,7 +6,7 @@ const { addRegisterValidation, addLoginValidation } = require("../../validation/
 const router = express.Router();
 
 
-const upload = multer({ storage: multer.memoryStorage() }); // Store file in memory as a buffer
+const {upload} = require("../../helpers/cloudinary") // Store file in memory as a buffer
 
 
 router.post("/register", upload.single("profilePic"), addRegisterValidation, registerUser);

@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs")
 const { createTable, checkRecordExists, insertRecord } = require("../../utils/sqlFunctions");
 const userSchema = require("../../models/user/User");
 const mySqlPool = require("../../db/db");
+const { imageUpload } = require("../../helpers/cloudinary");
 
 
 const generateAccessToken = (userId) => {
@@ -15,12 +16,19 @@ const generateAccessToken = (userId) => {
 
 const registerUser = async (req, res) => {
     const { userName, email, password, phoneNumber, gender } = req.body;
-    const profilePic = req.file ? req.file.buffer : null; // Handle profile_pic from multer
+
+    // const profilePic = req.file ? req.file.buffer : null; // Handle profile_pic from multer
+
 
     try {
         // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashPassword = await bcrypt.hash(password, salt);
+        
+
+        const profilePic = Buffer.from(req.file.buffer).toString("base64");
+        const url = "data:" + req.file.mimetype + ";base64," + profilePic;
+
 
         const newUser = {
             userName,
@@ -28,12 +36,25 @@ const registerUser = async (req, res) => {
             password: hashPassword,
             phoneNumber,
             gender,
-            profilePic : profilePic,
+            profilePic: profilePic,
         };
 
+        
+
+        const result = await imageUpload(url);
+
+        if (result && result.url) {
+            newUser.profilePic = result.url;
+
+        } else {
+
+            throw new Error("Image uploaded failes: no url returned.")
+        }
+
+
         // Create table and check if user exists
-        await createTable(userSchema); 
-        const userAlreadyExists = await checkRecordExists("users", ["email", "phoneNumber"] , [email, phoneNumber]);
+        await createTable(userSchema);
+        const userAlreadyExists = await checkRecordExists("users", ["email", "phoneNumber"], [email, phoneNumber]);
 
         if (userAlreadyExists) {
             return res.status(409).json({ message: "User already exists" });
@@ -41,8 +62,9 @@ const registerUser = async (req, res) => {
 
         // Insert new user
         await insertRecord("users", newUser);
-        return res.status(201).json({ message: "User created successfully!" });
         
+        return res.status(201).json({ message: "User created successfully!" });
+
     } catch (error) {
         console.error("Error in registerUser:", error.message);
         return res.status(500).json({ message: "An error occurred", error: error.message });
@@ -60,7 +82,7 @@ const loginUser = async (req, res) => {
             error: "this fields can not be empty"
 
         });
-        
+
     }
 
     try {
@@ -82,11 +104,9 @@ const loginUser = async (req, res) => {
                 res.status(200).json({
                     userId: existingUser.userId,
                     email: existingUser.email,
-                    phoneNumber : existingUser.phoneNumber,
-                    gender : existingUser.gender,
-                    profilePic : existingUser.profilePic
-                    ? existingUser.profilePic.toString("base64") // Convert only if not null
-                    : null, // Convert buffer to base64 for response
+                    phoneNumber: existingUser.phoneNumber,
+                    gender: existingUser.gender,
+                    profilePic: existingUser.profilePic, // Convert buffer to base64 for response
                     access_token: generateAccessToken(existingUser.userId),
                 });
             } else {

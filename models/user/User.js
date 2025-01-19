@@ -5,7 +5,7 @@ userName varchar(255) not null,
 email varchar(255) unique not null,
 phoneNumber varchar(15) unique not null,
 gender varchar(255),
-profilePic longblob,
+profilePic varchar(500),
 password varchar(255)
 )`;
 
