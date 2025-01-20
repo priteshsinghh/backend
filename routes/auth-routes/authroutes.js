@@ -1,5 +1,4 @@
 const express = require("express");
-const multer = require("multer");
 const { registerUser, loginUser } = require("../../controllers/auth/authcontroller");
 const { addRegisterValidation, addLoginValidation } = require("../../validation/authValidation/authValidation")
 

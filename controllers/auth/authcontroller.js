@@ -17,6 +17,7 @@ const generateAccessToken = (userId) => {
 const registerUser = async (req, res) => {
     const { userName, email, password, phoneNumber, gender } = req.body;
 
+    // const profilePic = req.file ? req.file.buffer : null; // Handle profile_pic from multer
 
 
     try {
@@ -35,7 +36,7 @@ const registerUser = async (req, res) => {
             password: hashPassword,
             phoneNumber,
             gender,
-            profilePic,
+            profilePic: profilePic,
         };
 
         
