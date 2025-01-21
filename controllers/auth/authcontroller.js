@@ -114,7 +114,7 @@ const loginUser = async (req, res) => {
                 phoneNumber: existingUser.phoneNumber,
                 gender: existingUser.gender,
                 profilePic: existingUser.profilePic, // Convert buffer to base64 for response
-            }, 'CLIENT_SECRET_KEY', { expiresIn: '6d' })
+            }, 'CLIENT_SECRET_KEY', { expiresIn: '60m' })
 
             res.cookie('token', token, { httpOnly: true, secure: false }).json({
                 success: true,
