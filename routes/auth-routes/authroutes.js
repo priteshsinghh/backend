@@ -1,5 +1,5 @@
 const express = require("express");
-const { registerUser, loginUser } = require("../../controllers/auth/authcontroller");
+const { registerUser, loginUser, authMiddleware } = require("../../controllers/auth/authcontroller");
 const { addRegisterValidation, addLoginValidation } = require("../../validation/authValidation/authValidation")
 
 const router = express.Router();
@@ -10,6 +10,14 @@ const {upload} = require("../../helpers/cloudinary") // Store file in memory as 
 
 router.post("/register", upload.single("profilePic"), addRegisterValidation, registerUser);
 router.post("/login", addLoginValidation, loginUser);
+router.get("/check-auth", authMiddleware, (req,res)=>{
+    const user = req.user;
+    res.status(200).json({
+        success : true,
+        message: "Authenticated user",
+        user,
+    });
+});
 
 
 
