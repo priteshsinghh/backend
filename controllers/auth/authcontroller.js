@@ -15,7 +15,7 @@ const { imageUpload } = require("../../helpers/cloudinary");
 //register controller
 
 const registerUser = async (req, res) => {
-    const { userName, email, password, phoneNumber, gender } = req.body;
+    const { userName, email, password, phoneNumber, gender, userRole } = req.body;
     // const profilePic = req.file ? req.file.buffer : null; // Handle profile_pic from multer
     try {
         // Hash password
@@ -31,6 +31,7 @@ const registerUser = async (req, res) => {
             password: hashPassword,
             phoneNumber,
             gender,
+            userRole,
             profilePic: profilePic,
         };
 
@@ -87,22 +88,6 @@ const loginUser = async (req, res) => {
                 existingUser.password
             );
 
-            //     if (passwordMatch) {
-            //         res.status(200).json({
-            //             userId: existingUser.userId,
-            //             email: existingUser.email,
-            //             phoneNumber: existingUser.phoneNumber,
-            //             gender: existingUser.gender,
-            //             profilePic: existingUser.profilePic, // Convert buffer to base64 for response
-            //             access_token: generateAccessToken(existingUser.userId),
-            //         });
-            //     } else {
-            //         res.status(401).json({ error: "Invalid credentials" });
-            //     }
-            // } else {
-            //     res.status(401).json({ error: "Invalid credentials" });
-            // }
-
             if (!passwordMatch) return res.json({
                 success: false,
                 message: "Invalid Credentials"
@@ -113,6 +98,7 @@ const loginUser = async (req, res) => {
                 email: existingUser.email,
                 phoneNumber: existingUser.phoneNumber,
                 gender: existingUser.gender,
+                userRole: existingUser.userRole,
                 profilePic: existingUser.profilePic, // Convert buffer to base64 for response
             }, 'CLIENT_SECRET_KEY', { expiresIn: '60m' })
 
@@ -122,19 +108,32 @@ const loginUser = async (req, res) => {
                 user: {
                     email: existingUser.email,
                     phoneNumber: existingUser.phoneNumber,
+                    userRole: existingUser.userRole,
                     Id: existingUser._id,
                 },
             });
         }
     } catch (error) {
         res.status(500).json({
-            success : false,
+            success: false,
             error: error.message
         })
     }
 
 
 }
+
+
+//logout
+
+const logoutUser = (req, res) => {
+    res.clearCookie('token').json({
+        success: true,
+        message: "logout Successfully"
+    });
+};
+
+
 
 //auth middleware
 
@@ -169,4 +168,4 @@ const authMiddleware = async (req, res, next) => {
 
 
 
-module.exports = { registerUser, loginUser, authMiddleware };
+module.exports = { registerUser, loginUser, authMiddleware, logoutUser };

@@ -7,6 +7,7 @@ const schema = {
         email : joi.string().email().required(),
         phoneNumber: joi.number().integer().min(1000000000).message("Invalid mobile number").max(9999999999).message("Invalid mobile number").required(),
         gender : joi.string().valid("male","female","other").required(),
+        userRole : joi.string().valid("seller","buyer").required(),
         password: joi.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
     }),
 

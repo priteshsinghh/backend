@@ -6,7 +6,8 @@ email varchar(255) unique not null,
 phoneNumber varchar(15) unique not null,
 gender varchar(255),
 profilePic varchar(500),
-password varchar(255)
+password varchar(255),
+userRole varchar(255)
 )`;
 
 

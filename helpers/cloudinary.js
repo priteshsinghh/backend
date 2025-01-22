@@ -19,7 +19,7 @@ async function imageUpload(file) {
     return result;
 }
 
-const upload = multer({storage});
+const upload = multer({ storage });
 
-module.exports = {upload, imageUpload};
+module.exports = { upload, imageUpload };
 
