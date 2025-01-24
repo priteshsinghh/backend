@@ -17,6 +17,8 @@ router.post("/register", upload.single("profilePic"), addRegisterValidation, reg
 router.post("/login", addLoginValidation, loginUser);
 router.post("/logout",logoutUser);
 router.get("/mail-verification/:token", verifyEmail);
+
+
 router.get("/check-auth", authMiddleware, (req,res)=>{
     const user = req.user;
     res.status(200).json({

@@ -10,6 +10,7 @@ const { imageUpload } = require("../../helpers/cloudinary");
 const { sendMail } = require("../../utils/sqlFunctions");
 
 
+
 // const generateAccessToken = (userId) => {
 //     return jwt.sign({ userId }, "CLIENT_SECRET_KEY", { expiresIn: "7d" });
 // };
@@ -62,10 +63,10 @@ const registerUser = async (req, res) => {
         await insertRecord("users", newUser);
 
         //send verification mail
-        let mailSubject = "Verification Mail";
+        const mailSubject = "Verification Mail";
         const randomToken = randomstring.generate();
         const url1 = `http://localhost:5001/auth/mail-verification/${randomToken}`;
-        let content = `please click this to link to verify <a href="${url1}">${url1}</a>`
+        const content = `please click this link to verify <a href="${url1}">${url1}</a>`
 
         sendMail(email, mailSubject, content);
 
@@ -86,50 +87,58 @@ const registerUser = async (req, res) => {
 };
 
 
+//verify email
+
 const verifyEmail = async (req, res) => {
-    const token = req.params.token;
+    try {
+        const token = req.params.token;
 
-    console.log("Received token:", token);
+        console.log("Received token:", token);
 
-    if (!token) {
-        return res.status(400).json({ message: "Token is required" });
-    }
-    console.log("Executing query to find user with token:", token);
-    
+        if (!token) {
+            return res.status(400).json({ message: "Token is required" });
+        }
 
-    mySqlPool.query('SELECT * FROM users WHERE token = ? LIMIT 1', [token],
-        function (error, result) {
+        // Query for user by token
+        const [result] = await mySqlPool.query('SELECT * FROM users WHERE token = ? LIMIT 1', [token]);
+
+        if (result.length > 0) {
+            const email = result[0].email;
             console.log(result);
+            
 
-            if (error) {
-                console.error("Database Error:", error);
-                return res.status(500).json({ message: "Internal server error" });
-            }
+            // Update user's verification status
+            await mySqlPool.query('UPDATE users SET token = NULL, isVerified = true WHERE email = ?', [email]);
+            console.log(result);
+            
 
-            if (result.length > 0) {
-                const userId = result[0].email;
-                console.log(userId);
-
-
-                // Update user's verification status
-                mySqlPool.query('UPDATE users SET token = NULL, isVerified = 1 WHERE email = ?', [email], function (updateError) {
-                    if (updateError) {
-                        console.error("Update Error:", updateError);
-                        return res.status(500).json({ message: "Failed to update user" });
-                    }
-
-                    console.log("User verified successfully");
-                    return res.render("email-verified", { message: "Verified successfully" });
-                });
-            } else {
-                console.log("Invalid token, no user found");
-                return res.render('404');
-            }
-        });
+            console.log("User verified successfully");
+            return res.status(200).json({
+                success: true,
+                message: "User Verified successfully"
+            })
+        } else {
+            console.log("Invalid token, no user found");
+            return res.status(401).json({
+                success: false,
+                message: "failed"
+            })
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        return res.status(500).json({ message: error.message });
+    }
 };
 
 
+
+
+
+
+
+
 //login controller
+
 const loginUser = async (req, res) => {
     const { email, phoneNumber, password } = req.body;
 
@@ -139,6 +148,7 @@ const loginUser = async (req, res) => {
         });
     }
     try {
+
         const existingUser = await checkRecordExists("users", ["email", "phoneNumber"], [email, phoneNumber]);
         if (existingUser) {
             if (!existingUser.password) {
