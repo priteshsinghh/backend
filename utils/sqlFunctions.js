@@ -1,4 +1,5 @@
 const mySqlPool = require('../db/db'); // Import promise-based pool
+const nodemailer = require("nodemailer")
 
 const createTable = async (schema) => {
     try {
@@ -24,7 +25,7 @@ const checkRecordExists = async (tableName, columns, values) => {
         // Generate query conditions for multiple columns
         const conditions = columns.map((col) => `\`${col}\` = ?`).join(" OR ");
         const query = `SELECT * FROM \`${tableName}\` WHERE ${conditions} LIMIT 1`;
-        
+
         // Execute query with parameterized values
         const [results] = await mySqlPool.query(query, values);
         return results.length ? results[0] : null;
@@ -45,4 +46,49 @@ const insertRecord = async (tableName, record) => {
     }
 };
 
-module.exports = { createTable, checkRecordExists, insertRecord };
+
+const sendMail = async (email, emailSubject, content) => {
+
+    try {
+
+        const transport = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            requireTLS: true,
+            auth: {
+                user: process.env.SMTP_MAIL,
+                pass: process.env.SMTP_PASSWORD
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.SMTP_MAIL,
+            to: email,
+            subject: emailSubject,
+            html: content
+        }
+
+        transport.sendMail(mailOptions, function (error, info) {
+            if (error) {
+                console.log(error);
+
+            } else {
+                console.log("Mail sent Successsfully", info.response);
+
+            }
+        });
+
+
+
+    } catch (error) {
+        console.log(error.message);
+
+    }
+}
+
+
+
+
+
+module.exports = { createTable, checkRecordExists, insertRecord, sendMail };

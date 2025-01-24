@@ -2,9 +2,12 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs")
 const { createTable, checkRecordExists, insertRecord } = require("../../utils/sqlFunctions");
-const userSchema = require("../../models/user/User");
+const userSchema = require("../../models/User");
 const mySqlPool = require("../../db/db");
+const randomstring = require("randomstring")
 const { imageUpload } = require("../../helpers/cloudinary");
+
+const { sendMail } = require("../../utils/sqlFunctions");
 
 
 // const generateAccessToken = (userId) => {
@@ -15,7 +18,7 @@ const { imageUpload } = require("../../helpers/cloudinary");
 //register controller
 
 const registerUser = async (req, res) => {
-    const { userName, email, password, phoneNumber, gender, userRole } = req.body;
+    const { userName, email, password, phoneNumber, gender, userRole, token, isVerified } = req.body;
     // const profilePic = req.file ? req.file.buffer : null; // Handle profile_pic from multer
     try {
         // Hash password
@@ -32,6 +35,8 @@ const registerUser = async (req, res) => {
             phoneNumber,
             gender,
             userRole,
+            token,
+            isVerified,
             profilePic: profilePic,
         };
 
@@ -56,6 +61,22 @@ const registerUser = async (req, res) => {
         // Insert new user
         await insertRecord("users", newUser);
 
+        //send verification mail
+        let mailSubject = "Verification Mail";
+        const randomToken = randomstring.generate();
+        const url1 = `http://localhost:5001/auth/mail-verification/${randomToken}`;
+        let content = `please click this to link to verify <a href="${url1}">${url1}</a>`
+
+        sendMail(email, mailSubject, content);
+
+        mySqlPool.query('UPDATE users set token=? where email=?', [randomToken, email], function (error, result, fields) {
+            if (error) {
+                return res.status(400).json({
+                    message: error.message
+                })
+            }
+        });
+
         return res.status(201).json({ message: "User created successfully!" });
 
     } catch (error) {
@@ -64,6 +85,48 @@ const registerUser = async (req, res) => {
     }
 };
 
+
+const verifyEmail = async (req, res) => {
+    const token = req.params.token;
+
+    console.log("Received token:", token);
+
+    if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+    }
+    console.log("Executing query to find user with token:", token);
+    
+
+    mySqlPool.query('SELECT * FROM users WHERE token = ? LIMIT 1', [token],
+        function (error, result) {
+            console.log(result);
+
+            if (error) {
+                console.error("Database Error:", error);
+                return res.status(500).json({ message: "Internal server error" });
+            }
+
+            if (result.length > 0) {
+                const userId = result[0].email;
+                console.log(userId);
+
+
+                // Update user's verification status
+                mySqlPool.query('UPDATE users SET token = NULL, isVerified = 1 WHERE email = ?', [email], function (updateError) {
+                    if (updateError) {
+                        console.error("Update Error:", updateError);
+                        return res.status(500).json({ message: "Failed to update user" });
+                    }
+
+                    console.log("User verified successfully");
+                    return res.render("email-verified", { message: "Verified successfully" });
+                });
+            } else {
+                console.log("Invalid token, no user found");
+                return res.render('404');
+            }
+        });
+};
 
 
 //login controller
@@ -99,8 +162,8 @@ const loginUser = async (req, res) => {
                 phoneNumber: existingUser.phoneNumber,
                 gender: existingUser.gender,
                 userRole: existingUser.userRole,
-                profilePic: existingUser.profilePic, // Convert buffer to base64 for response
-            }, 'CLIENT_SECRET_KEY', { expiresIn: '60m' })
+                profilePic: existingUser.profilePic,
+            }, 'CLIENT_SECRET_KEY', { expiresIn: '7d' })
 
             res.cookie('token', token, { httpOnly: true, secure: false }).json({
                 success: true,
@@ -164,8 +227,4 @@ const authMiddleware = async (req, res, next) => {
 
 
 
-
-
-
-
-module.exports = { registerUser, loginUser, authMiddleware, logoutUser };
+module.exports = { registerUser, loginUser, authMiddleware, logoutUser, verifyEmail };

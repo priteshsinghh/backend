@@ -3,8 +3,10 @@ require("dotenv").config();
 const express = require("express")
 const cors = require("cors");
 const cookieParser = require("cookie-parser")
-const authRoutes = require("./routes/auth-routes/authroutes");
 const mySqlPool = require("./db/db");
+const authRoutes = require("./routes/auth-routes/authroutes");
+
+const adminProductRouter = require("./routes/admin/product-rotes")
 
 
 const PORT = process.env.PORT || 5001;
@@ -29,6 +31,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/auth", authRoutes);
+
+
+app.use("/admin/products",adminProductRouter)
 
 
 mySqlPool.query("SELECT 1").then(() => {
