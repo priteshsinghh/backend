@@ -65,8 +65,7 @@ const registerUser = async (req, res) => {
         //send verification mail
         const mailSubject = "Verification Mail";
         const randomToken = randomstring.generate();
-        const url1 = `http://localhost:5001/auth/mail-verification/${randomToken}`;
-        const content = `please click this link to verify <a href="${url1}">${url1}</a>`
+        const content = 'Hello '+userName+', Please Click <a href="http://localhost:5173/auth/mail-verification?token='+randomToken+'&phoneNumber='+phoneNumber+'">Verify</a> to verify your email'
 
         sendMail(email, mailSubject, content);
 
@@ -91,26 +90,24 @@ const registerUser = async (req, res) => {
 
 const verifyEmail = async (req, res) => {
     try {
-        const token = req.params.token;
+        const token = req.query.token;
+        const phone = req.query.phoneNumber;
 
-        console.log("Received token:", token);
+        console.log(req.query);
+        
 
         if (!token) {
             return res.status(400).json({ message: "Token is required" });
         }
 
         // Query for user by token
-        const [result] = await mySqlPool.query('SELECT * FROM users WHERE token = ? LIMIT 1', [token]);
+        const [result] = await mySqlPool.query('SELECT * FROM users WHERE token = ? AND phoneNumber = ?  LIMIT 1', [token, phone]);
 
         if (result.length > 0) {
             const email = result[0].email;
-            console.log(result);
-            
 
             // Update user's verification status
             await mySqlPool.query('UPDATE users SET token = NULL, isVerified = true WHERE email = ?', [email]);
-            console.log(result);
-            
 
             console.log("User verified successfully");
             return res.status(200).json({
@@ -151,8 +148,15 @@ const loginUser = async (req, res) => {
 
         const existingUser = await checkRecordExists("users", ["email", "phoneNumber"], [email, phoneNumber]);
         if (existingUser) {
+
+            if (existingUser.isVerified !== 1) {
+                return res.status(401).json({
+                    error: "Please verify your email to log in"
+                });
+            }
+
             if (!existingUser.password) {
-                res.status(401).json({ error: "Invalid credentials" });
+                res.status(401).json({ error: "Invalid credentials or need to verify your email" });
                 return;
             }
 

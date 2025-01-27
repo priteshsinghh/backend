@@ -9,14 +9,13 @@ const router = express();
 const {upload} = require("../../helpers/cloudinary") // Store file in memory as a buffer
 
 
-router.set('view engine', 'ejs');
-router.set('views', path.join(__dirname, 'views'));
+
 
 
 router.post("/register", upload.single("profilePic"), addRegisterValidation, registerUser);
 router.post("/login", addLoginValidation, loginUser);
 router.post("/logout",logoutUser);
-router.get("/mail-verification/:token", verifyEmail);
+router.get("/mail-verification", verifyEmail);
 
 
 router.get("/check-auth", authMiddleware, (req,res)=>{
