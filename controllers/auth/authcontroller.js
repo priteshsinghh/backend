@@ -135,20 +135,20 @@ const forgetPassword = async (req, res) => {
 
     try {
 
-        const { email, phoneNumber } = req.body;
+        const { email} = req.body;
         console.log(req.body);
 
 
-        if (!email || !phoneNumber) {
+        if (!email) {
             return res.status(400).json({
                 success: false,
-                message: "email and phone Number is required",
+                message: "email is required",
             })
         }
 
         await createTable(forgetPasswordSchema);
 
-        const [result] = await mySqlPool.query('SELECT * FROM users WHERE email = ? AND phoneNumber = ?  LIMIT 1', [email, phoneNumber]);
+        const [result] = await mySqlPool.query('SELECT * FROM users WHERE email = ?   LIMIT 1', [email]);
 
         if (result.length > 0) {
             const randomString = randomstring.generate();
@@ -158,13 +158,12 @@ const forgetPassword = async (req, res) => {
             const newData = {
 
                 email: result[0].email,
-                phoneNumber: result[0].phoneNumber,
                 token: randomString,
             }
 
             const userName = result[0].userName;
             const mailSubject = "Password reset";
-            const content = 'Hello ' + userName + ', Please <a href="http://localhost:5173/auth/reset-password?token=' + randomString + '&phoneNumber=' + phoneNumber + '">Click Here</a> to reset your password'
+            const content = 'Hello ' + userName + ', Please <a href="http://localhost:5173/auth/reset-password?token=' + randomString + '">Click Here</a> to reset your password'
 
             sendMail(email, mailSubject, content);
 
@@ -180,7 +179,7 @@ const forgetPassword = async (req, res) => {
             console.log("Invalid email, no user found");
             return res.status(401).json({
                 success: false,
-                message: "failed"
+                message: "Invalid email, no user found"
             })
         }
     } catch (error) {
@@ -199,7 +198,6 @@ const forgetPassword = async (req, res) => {
 
 const resetPasswordLoad = async (req, res) => {
     const token = req.query.token;
-    const phoneNumber = req.query.phoneNumber;
 
     console.log(req.query);
 
@@ -207,7 +205,7 @@ const resetPasswordLoad = async (req, res) => {
         return res.status(400).json({ message: "Token is required" });
     }
 
-    const [result] = await mySqlPool.query('select * from passwordReset where token = ? AND phoneNumber = ?  limit 1', token, phoneNumber);
+    const [result] = await mySqlPool.query('select * from passwordReset where token = ? limit 1', token);
 
     if (result.length > 0) {
         const email = result[0].email;
@@ -238,13 +236,13 @@ const resetPasswordLoad = async (req, res) => {
 
 
 const resetPassword = async (req, res) => {
-    const { token, phoneNumber, newPassword } = req.body;
+    const { token, newPassword } = req.body;
 
     try {
         // Validate the token and phone number
         const [result] = await mySqlPool.query(
-            'SELECT * FROM passwordReset WHERE token = ? AND phoneNumber = ? LIMIT 1',
-            [token, phoneNumber]
+            'SELECT * FROM passwordReset WHERE token = ? LIMIT 1',
+            [token]
         );
 
         if (result.length === 0) {
