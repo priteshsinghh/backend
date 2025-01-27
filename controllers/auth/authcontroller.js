@@ -8,6 +8,7 @@ const randomstring = require("randomstring")
 const { imageUpload } = require("../../helpers/cloudinary");
 
 const { sendMail } = require("../../utils/sqlFunctions");
+const forgetPasswordSchema = require("../../models/ForgetPassword");
 
 
 
@@ -65,7 +66,7 @@ const registerUser = async (req, res) => {
         //send verification mail
         const mailSubject = "Verification Mail";
         const randomToken = randomstring.generate();
-        const content = 'Hello '+userName+', Please Click <a href="http://localhost:5173/auth/mail-verification?token='+randomToken+'&phoneNumber='+phoneNumber+'">Verify</a> to verify your email'
+        const content = 'Hello ' + userName + ', Please Click <a href="http://localhost:5173/auth/mail-verification?token=' + randomToken + '&phoneNumber=' + phoneNumber + '">Verify</a> to verify your email'
 
         sendMail(email, mailSubject, content);
 
@@ -94,7 +95,7 @@ const verifyEmail = async (req, res) => {
         const phone = req.query.phoneNumber;
 
         console.log(req.query);
-        
+
 
         if (!token) {
             return res.status(400).json({ message: "Token is required" });
@@ -129,9 +130,154 @@ const verifyEmail = async (req, res) => {
 
 
 
+//forget Password
+const forgetPassword = async (req, res) => {
+
+    try {
+
+        const { email, phoneNumber } = req.body;
+        console.log(req.body);
+
+
+        if (!email || !phoneNumber) {
+            return res.status(400).json({
+                success: false,
+                message: "email and phone Number is required",
+            })
+        }
+
+        await createTable(forgetPasswordSchema);
+
+        const [result] = await mySqlPool.query('SELECT * FROM users WHERE email = ? AND phoneNumber = ?  LIMIT 1', [email, phoneNumber]);
+
+        if (result.length > 0) {
+            const randomString = randomstring.generate();
+            console.log(randomString);
+
+
+            const newData = {
+
+                email: result[0].email,
+                phoneNumber: result[0].phoneNumber,
+                token: randomString,
+            }
+
+            const userName = result[0].userName;
+            const mailSubject = "Password reset";
+            const content = 'Hello ' + userName + ', Please <a href="http://localhost:5173/auth/reset-password?token=' + randomString + '&phoneNumber=' + phoneNumber + '">Click Here</a> to reset your password'
+
+            sendMail(email, mailSubject, content);
+
+            await mySqlPool.query('delete from passwordReset where email = ?', email)
+            insertRecord("passwordReset", newData);
+            console.log("data upload successfully");
+            return res.status(200).json({
+                success: true,
+                message: "mail sent successfully"
+            })
+
+        } else {
+            console.log("Invalid email, no user found");
+            return res.status(401).json({
+                success: false,
+                message: "failed"
+            })
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "some error occured",
+        })
+
+    }
 
 
 
+}
+
+
+const resetPasswordLoad = async (req, res) => {
+    const token = req.query.token;
+    const phoneNumber = req.query.phoneNumber;
+
+    console.log(req.query);
+
+    if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+    }
+
+    const [result] = await mySqlPool.query('select * from passwordReset where token = ? AND phoneNumber = ?  limit 1', token, phoneNumber);
+
+    if (result.length > 0) {
+        const email = result[0].email;
+        const phoneNumber = result[0].phoneNumber;
+
+        await mySqlPool.query('select * from users where email = ? AND phoneNumber = ?', email, phoneNumber);
+
+        return res.status(200).json({
+            success: true,
+            message: "Valid token and user found",
+            data: {
+                email: email,
+                phoneNumber: phoneNumber,
+            },
+        });
+
+
+    } else {
+        console.log("Invalid token, no user found");
+        return res.status(401).json({
+            success: false,
+            message: "failed"
+        })
+
+    }
+}
+
+
+
+const resetPassword = async (req, res) => {
+    const { token, phoneNumber, newPassword } = req.body;
+
+    try {
+        // Validate the token and phone number
+        const [result] = await mySqlPool.query(
+            'SELECT * FROM passwordReset WHERE token = ? AND phoneNumber = ? LIMIT 1',
+            [token, phoneNumber]
+        );
+
+        if (result.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid token or phone number',
+            });
+        }
+
+        const email = result[0].email;
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update the user's password
+        await mySqlPool.query('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, email]);
+
+        // Delete the token entry to prevent reuse
+        await mySqlPool.query('DELETE FROM passwordReset WHERE email = ?', [email]);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password reset successfully',
+        });
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to reset password. Please try again later.',
+        });
+    }
+};
 
 
 //login controller
@@ -216,7 +362,7 @@ const logoutUser = (req, res) => {
 
 const authMiddleware = async (req, res, next) => {
     const token = req.cookies.token;
-    console.log(token);
+    // console.log(token);
 
     if (!token) return res.json({
         success: false,
@@ -241,4 +387,4 @@ const authMiddleware = async (req, res, next) => {
 
 
 
-module.exports = { registerUser, loginUser, authMiddleware, logoutUser, verifyEmail };
+module.exports = { registerUser, loginUser, authMiddleware, logoutUser, verifyEmail, forgetPassword, resetPasswordLoad, resetPassword };
