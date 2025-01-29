@@ -156,7 +156,6 @@ const forgetPassword = async (req, res) => {
 
 
             const newData = {
-
                 email: result[0].email,
                 token: randomString,
             }
@@ -358,31 +357,31 @@ const logoutUser = (req, res) => {
 
 //auth middleware
 
-const authMiddleware = async (req, res, next) => {
-    const token = req.cookies.token;
-    // console.log(token);
+// const authMiddleware = async (req, res, next) => {
+//     const token = req.cookies.token;
+//     // console.log(token);
 
-    if (!token) return res.json({
-        success: false,
-        message: "Unauthorize user !"
-    })
-    try {
+//     if (!token) return res.json({
+//         success: false,
+//         message: "Unauthorize user !"
+//     })
+//     try {
 
-        const decoded = jwt.verify(token, 'CLIENT_SECRET_KEY');
-        req.user = decoded;
-        next();
+//         const decoded = jwt.verify(token, 'CLIENT_SECRET_KEY');
+//         req.user = decoded;
+//         next();
 
-    } catch (error) {
-        console.log(error);
-        res.status(401).json({
-            success: false,
-            message: "Some Error Occured"
-        })
+//     } catch (error) {
+//         console.log(error);
+//         res.status(401).json({
+//             success: false,
+//             message: "Some Error Occured"
+//         })
 
-    }
-}
-
-
+//     }
+// }
 
 
-module.exports = { registerUser, loginUser, authMiddleware, logoutUser, verifyEmail, forgetPassword, resetPasswordLoad, resetPassword };
+
+
+module.exports = { registerUser, loginUser, logoutUser, verifyEmail, forgetPassword, resetPasswordLoad, resetPassword };
