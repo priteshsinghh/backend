@@ -135,7 +135,7 @@ const forgetPassword = async (req, res) => {
 
     try {
 
-        const { email} = req.body;
+        const { email } = req.body;
         console.log(req.body);
 
 
@@ -290,6 +290,7 @@ const loginUser = async (req, res) => {
     try {
 
         const existingUser = await checkRecordExists("users", ["email", "phoneNumber"], [email, phoneNumber]);
+
         if (existingUser) {
 
             if (existingUser.isVerified !== 1) {
@@ -310,11 +311,10 @@ const loginUser = async (req, res) => {
 
             if (!passwordMatch) return res.json({
                 success: false,
-                message: "Invalid Credentials"
+                message: "Invalid Credentials please write it correct"
             });
 
             const token = jwt.sign({
-                Id: existingUser._id,
                 email: existingUser.email,
                 phoneNumber: existingUser.phoneNumber,
                 gender: existingUser.gender,
@@ -322,65 +322,38 @@ const loginUser = async (req, res) => {
                 profilePic: existingUser.profilePic,
             }, 'CLIENT_SECRET_KEY', { expiresIn: '7d' })
 
-            res.cookie('token', token, { httpOnly: true, secure: false }).json({
-                success: true,
-                message: "Logged in Successfully",
-                user: {
-                    email: existingUser.email,
-                    phoneNumber: existingUser.phoneNumber,
-                    userRole: existingUser.userRole,
-                    Id: existingUser._id,
-                },
-            });
+            if (res.status(201)) {
+                return res.json({
+                    status: "ok",
+                    data: {
+                        token: token,
+                        userRole: existingUser.userRole,
+                    }
+                });
+            } else {
+                return res.json({ error: "error" });
+            }
         }
+
+        res.json({
+            status: "error",
+            error: "Invalid Password"
+        });
+
     } catch (error) {
         res.status(500).json({
             success: false,
             error: error.message
         })
     }
-
-
 }
 
 
 //logout
 
-const logoutUser = (req, res) => {
-    res.clearCookie('token').json({
-        success: true,
-        message: "logout Successfully"
-    });
+const logoutUser = () => {
+    localStorage.clear();
 };
-
-
-
-//auth middleware
-
-// const authMiddleware = async (req, res, next) => {
-//     const token = req.cookies.token;
-//     // console.log(token);
-
-//     if (!token) return res.json({
-//         success: false,
-//         message: "Unauthorize user !"
-//     })
-//     try {
-
-//         const decoded = jwt.verify(token, 'CLIENT_SECRET_KEY');
-//         req.user = decoded;
-//         next();
-
-//     } catch (error) {
-//         console.log(error);
-//         res.status(401).json({
-//             success: false,
-//             message: "Some Error Occured"
-//         })
-
-//     }
-// }
-
 
 
 
