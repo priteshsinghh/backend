@@ -4,17 +4,11 @@ const bcrypt = require("bcryptjs")
 const { createTable, checkRecordExists, insertRecord } = require("../../utils/sqlFunctions");
 const userSchema = require("../../models/User");
 const mySqlPool = require("../../db/db");
+const forgetPasswordSchema = require("../../models/ForgetPassword");
 const randomstring = require("randomstring")
 const { imageUpload } = require("../../helpers/cloudinary");
-
 const { sendMail } = require("../../utils/sqlFunctions");
-const forgetPasswordSchema = require("../../models/ForgetPassword");
 
-
-
-// const generateAccessToken = (userId) => {
-//     return jwt.sign({ userId }, "CLIENT_SECRET_KEY", { expiresIn: "7d" });
-// };
 
 
 //register controller
@@ -78,7 +72,10 @@ const registerUser = async (req, res) => {
             }
         });
 
-        return res.status(201).json({ message: "User created successfully!" });
+        return res.status(201).json({
+            status: "ok",
+            message: "User created successfully!"
+        });
 
     } catch (error) {
         console.error("Error in registerUser:", error.message);
