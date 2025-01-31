@@ -7,7 +7,6 @@ const userSchema = `create table if not exists users (
     gender varchar(255),
     userRole varchar(255),
     isVerified boolean DEFAULT false,
-    token varchar(255),
     profilePic varchar(500),
     password varchar(255)
   )`;

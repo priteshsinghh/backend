@@ -1,5 +1,6 @@
 
 const jwt = require("jsonwebtoken");
+
 const bcrypt = require("bcryptjs")
 const { createTable, checkRecordExists, insertRecord } = require("../../utils/sqlFunctions");
 const userSchema = require("../../models/User");
@@ -14,8 +15,8 @@ const { sendMail } = require("../../utils/sqlFunctions");
 //register controller
 
 const registerUser = async (req, res) => {
-    const { userName, email, password, phoneNumber, gender, userRole, token, isVerified } = req.body;
-    // const profilePic = req.file ? req.file.buffer : null; // Handle profile_pic from multer
+    const { userName, email, password, phoneNumber, gender, userRole, isVerified } = req.body;
+   
     try {
         // Hash password
         const salt = await bcrypt.genSalt(10);
@@ -31,7 +32,6 @@ const registerUser = async (req, res) => {
             phoneNumber,
             gender,
             userRole,
-            token,
             isVerified,
             profilePic: profilePic,
         };
@@ -59,18 +59,11 @@ const registerUser = async (req, res) => {
 
         //send verification mail
         const mailSubject = "Verification Mail";
-        const randomToken = randomstring.generate();
+        const randomToken = jwt.sign({ email }, 'CLIENT_SECRET_KEY', { expiresIn: '5m' })
+
         const content = 'Hello ' + userName + ', Please Click <a href="http://localhost:5173/auth/mail-verification?token=' + randomToken + '&phoneNumber=' + phoneNumber + '">Verify</a> to verify your email'
 
         sendMail(email, mailSubject, content);
-
-        mySqlPool.query('UPDATE users set token=? where email=?', [randomToken, email], function (error, result, fields) {
-            if (error) {
-                return res.status(400).json({
-                    message: error.message
-                })
-            }
-        });
 
         return res.status(201).json({
             status: "ok",
@@ -84,44 +77,119 @@ const registerUser = async (req, res) => {
 };
 
 
+//login controller
+
+const loginUser = async (req, res) => {
+    const { email, phoneNumber, password } = req.body;
+
+    if (!email && !phoneNumber || !password) {
+        return res.status(400).json({
+            error: "this fields can not be empty"
+        });
+    }
+    try {
+
+        const existingUser = await checkRecordExists("users", ["email", "phoneNumber"], [email, phoneNumber]);
+
+        if (existingUser) {
+
+            if (existingUser.isVerified !== 1) {
+                return res.status(401).json({
+                    error: "Please verify your email to log in"
+                });
+            }
+
+            if (!existingUser.password) {
+                res.status(401).json({ error: "Invalid credentials or need to verify your email" });
+                return;
+            }
+
+            const passwordMatch = await bcrypt.compare(
+                password,
+                existingUser.password
+            );
+
+            if (!passwordMatch) return res.json({
+                success: false,
+                message: "Invalid Credentials please write it correct"
+            });
+
+            const token = jwt.sign({
+                email: existingUser.email,
+                phoneNumber: existingUser.phoneNumber,
+                gender: existingUser.gender,
+                userRole: existingUser.userRole,
+                profilePic: existingUser.profilePic,
+            }, 'CLIENT_SECRET_KEY', { expiresIn: '60m' })
+
+            
+            if (res.status(201)) {
+                return res.json({
+                    status: "ok",
+                    data: {
+                        token: token,
+                        userRole: existingUser.userRole,
+                    }
+                });
+            } else {
+                return res.json({ error: "error" });
+            }
+        }
+
+        res.json({
+            status: "error",
+            error: "user no exist"
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        })
+    }
+}
+
+
 //verify email
 
 const verifyEmail = async (req, res) => {
+    const token = req.query.token;
+    const phoneNumber = req.query.token;
+
     try {
-        const token = req.query.token;
-        const phone = req.query.phoneNumber;
+        // Decode JWT
 
-        console.log(req.query);
+        const decoded = jwt.verify(token, 'CLIENT_SECRET_KEY');
+        const email = decoded.email;
 
+        const existingUser = await checkRecordExists("users", ["email", "phoneNumber"], [email, phoneNumber]);
 
-        if (!token) {
-            return res.status(400).json({ message: "Token is required" });
-        }
-
-        // Query for user by token
-        const [result] = await mySqlPool.query('SELECT * FROM users WHERE token = ? AND phoneNumber = ?  LIMIT 1', [token, phone]);
-
-        if (result.length > 0) {
-            const email = result[0].email;
-
-            // Update user's verification status
-            await mySqlPool.query('UPDATE users SET token = NULL, isVerified = true WHERE email = ?', [email]);
-
-            console.log("User verified successfully");
+        if (existingUser.isVerified === 1) {
             return res.status(200).json({
-                success: true,
-                message: "User Verified successfully"
-            })
-        } else {
-            console.log("Invalid token, no user found");
-            return res.status(401).json({
                 success: false,
-                message: "failed"
-            })
+                message: 'Invalid email or already verified.'
+            });
         }
-    } catch (error) {
-        console.error("Error:", error);
-        return res.status(500).json({ message: error.message });
+        // Update isVerified
+        const [result] = await mySqlPool.query('UPDATE users SET isVerified = true WHERE email = ?', [email]);
+
+        if (result.affectedRows === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid email or already verified.'
+            });
+        } else {
+            res.status(200).json({
+                success: true,
+                message: 'Email verified successfully.'
+            });
+        }
+
+    } catch (err) {
+        res.status(400).json({
+            success: false,
+            err: 'Invalid or expired token.'
+        });
     }
 };
 
@@ -274,76 +342,6 @@ const resetPassword = async (req, res) => {
 };
 
 
-//login controller
-
-const loginUser = async (req, res) => {
-    const { email, phoneNumber, password } = req.body;
-
-    if (!email && !phoneNumber || !password) {
-        return res.status(400).json({
-            error: "this fields can not be empty"
-        });
-    }
-    try {
-
-        const existingUser = await checkRecordExists("users", ["email", "phoneNumber"], [email, phoneNumber]);
-
-        if (existingUser) {
-
-            if (existingUser.isVerified !== 1) {
-                return res.status(401).json({
-                    error: "Please verify your email to log in"
-                });
-            }
-
-            if (!existingUser.password) {
-                res.status(401).json({ error: "Invalid credentials or need to verify your email" });
-                return;
-            }
-
-            const passwordMatch = await bcrypt.compare(
-                password,
-                existingUser.password
-            );
-
-            if (!passwordMatch) return res.json({
-                success: false,
-                message: "Invalid Credentials please write it correct"
-            });
-
-            const token = jwt.sign({
-                email: existingUser.email,
-                phoneNumber: existingUser.phoneNumber,
-                gender: existingUser.gender,
-                userRole: existingUser.userRole,
-                profilePic: existingUser.profilePic,
-            }, 'CLIENT_SECRET_KEY', { expiresIn: '7d' })
-
-            if (res.status(201)) {
-                return res.json({
-                    status: "ok",
-                    data: {
-                        token: token,
-                        userRole: existingUser.userRole,
-                    }
-                });
-            } else {
-                return res.json({ error: "error" });
-            }
-        }
-
-        res.json({
-            status: "error",
-            error: "Invalid Password"
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: error.message
-        })
-    }
-}
 
 
 //logout
