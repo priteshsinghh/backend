@@ -5,6 +5,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser")
 const mySqlPool = require("./db/db");
 const authRoutes = require("./routes/auth-routes/authroutes");
+const profileRoutes = require("./routes/home/profileroutes");
 
 const adminProductRouter = require("./routes/admin/product-rotes")
 
@@ -34,6 +35,8 @@ app.use("/auth", authRoutes);
 
 
 app.use("/admin/products",adminProductRouter)
+
+app.use("/home", profileRoutes);
 
 
 mySqlPool.query("SELECT 1").then(() => {

@@ -16,7 +16,7 @@ const { sendMail } = require("../../utils/sqlFunctions");
 
 const registerUser = async (req, res) => {
     const { userName, email, password, phoneNumber, gender, userRole, isVerified } = req.body;
-   
+
     try {
         // Hash password
         const salt = await bcrypt.genSalt(10);
@@ -122,14 +122,21 @@ const loginUser = async (req, res) => {
                 profilePic: existingUser.profilePic,
             }, 'CLIENT_SECRET_KEY', { expiresIn: '60m' })
 
-            
+
             if (res.status(201)) {
                 return res.json({
-                    status: "ok",
-                    data: {
-                        token: token,
+                    success: true,
+                    token: token,
+                    user: {
+                        userName: existingUser.userName,
+                        email: existingUser.email,
+                        phoneNumber: existingUser.phoneNumber,
+                        gender: existingUser.gender,
                         userRole: existingUser.userRole,
+                        profilePic: existingUser.profilePic,
+                        isVerified: existingUser.isVerified,
                     }
+
                 });
             } else {
                 return res.json({ error: "error" });
@@ -138,7 +145,7 @@ const loginUser = async (req, res) => {
 
         res.json({
             status: "error",
-            error: "user no exist"
+            error: "user not exist"
         });
 
     } catch (error) {

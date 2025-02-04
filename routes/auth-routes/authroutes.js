@@ -1,6 +1,5 @@
 const express = require("express");
-const path = require("path")
-const { registerUser, loginUser, authMiddleware, logoutUser, verifyEmail, forgetPassword, resetPasswordLoad, resetPassword } = require("../../controllers/auth/authcontroller");
+const { registerUser, loginUser, logoutUser, verifyEmail, forgetPassword, resetPasswordLoad, resetPassword } = require("../../controllers/auth/authcontroller");
 const { addRegisterValidation, addLoginValidation } = require("../../validation/authValidation/authValidation")
 
 const router = express.Router();
@@ -21,15 +20,6 @@ router.post("/forget-password", forgetPassword);
 router.get("/reset-password", resetPasswordLoad);
 router.post("/reset-password", resetPassword);
 
-
-// router.get("/check-auth", authMiddleware, (req,res)=>{
-//     const user = req.user;
-//     res.status(200).json({
-//         success : true,
-//         message: "Authenticated user",
-//         user,
-//     });
-// });
 
 
 
