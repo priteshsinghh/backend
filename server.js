@@ -36,7 +36,7 @@ app.use("/auth", authRoutes);
 
 app.use("/admin/products",adminProductRouter)
 
-app.use("/home", profileRoutes);
+app.use("/shop", profileRoutes);
 
 
 mySqlPool.query("SELECT 1").then(() => {
