@@ -1,11 +1,13 @@
-const multer = require("multer")
 const db = require("../../db/db");
+const bcrypt = require("bcryptjs")
 const { imageUpload } = require("../../helpers/cloudinary");
 
 
 const getProfile = async (req, res) => {
     try {
         const email = req.query.email;
+        console.log(email);
+
 
         if (!email) {
             return res.status(400).json({
@@ -45,7 +47,8 @@ const editProfile = async (req, res) => {
     try {
 
         const email = req.query.email;
-        console.log("email", email);
+        console.log(email);
+
 
         if (!email) {
             return res.status(400).json({
@@ -58,7 +61,6 @@ const editProfile = async (req, res) => {
             userName,
             phoneNumber,
             gender,
-            // profilePic,
         } = req.body;
 
         const [result] = await db.query('select * from users where email = ?', [email])
@@ -94,8 +96,7 @@ const editProfilePicture = async (req, res) => {
     try {
 
         const email = req.body.email;
-        console.log(email);
-        
+
         if (!email) {
             return res.status(400).json({
                 success: false,
@@ -131,4 +132,61 @@ const editProfilePicture = async (req, res) => {
 };
 
 
-module.exports = { getProfile, editProfile, editProfilePicture }
+const changePassword = async (req, res) => {
+    try {
+
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+        const email = req.query.email;
+        
+        if (!currentPassword || !newPassword || !confirmPassword || !email) {
+            return res.status(400).json({
+                success: false,
+                message: "fields not found"
+            })
+        }
+
+        if(newPassword !== confirmPassword){
+            return res.json({
+                success: false,
+                message: "Password does not matched"
+            })
+        }
+
+        const [users] = await db.query('select * from users where email = ?', [email]);
+
+        if (users.length > 0) {
+
+            const user = users[0];
+            
+            const passwordMatch = await bcrypt.compare(
+                currentPassword,
+                user.password
+            );
+
+            if (!passwordMatch) return res.json({
+                success: false,
+                message: "Wrong Old password"
+            });
+
+            const salt = await bcrypt.genSalt(10);
+            const hashPassword = await bcrypt.hash(newPassword, salt);
+
+            await db.query('update users set password = ? where email = ?', [hashPassword, email])
+
+            return res.status(200).json({
+                success: true,
+                message: "Password Changed Successfully"
+            })
+        }
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "some error occured"
+        })
+
+    }
+}
+
+module.exports = { getProfile, editProfile, editProfilePicture, changePassword }
