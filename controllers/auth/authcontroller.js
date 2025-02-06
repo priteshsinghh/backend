@@ -59,7 +59,7 @@ const registerUser = async (req, res) => {
 
         //send verification mail
         const mailSubject = "Verification Mail";
-        const randomToken = jwt.sign({ email }, 'CLIENT_SECRET_KEY', { expiresIn: '5m' })
+        const randomToken = jwt.sign({ email }, 'CLIENT_SECRET_KEY', { expiresIn: '1m' })
 
         const content = 'Hello ' + userName + ', Please Click <a href="http://localhost:5173/auth/mail-verification?token=' + randomToken + '&phoneNumber=' + phoneNumber + '">Verify</a> to verify your email'
 
@@ -94,9 +94,18 @@ const loginUser = async (req, res) => {
         if (existingUser) {
 
             if (existingUser.isVerified !== 1) {
+
+                const mailSubject = "Verification Mail";
+                const randomToken = jwt.sign({ email }, 'CLIENT_SECRET_KEY', { expiresIn: '10m' })
+
+                const content = 'Hello ' + existingUser.userName + ', Please Click <a href="http://localhost:5173/auth/mail-verification?token=' + randomToken + '&phoneNumber=' + phoneNumber + '">Verify</a> to verify your email'
+
+                sendMail(email, mailSubject, content);
+
                 return res.status(401).json({
-                    error: "Please verify your email to log in"
+                    error: "Please verify your email to log in Check you inbox"
                 });
+
             }
 
             if (!existingUser.password) {
@@ -242,6 +251,7 @@ const forgetPassword = async (req, res) => {
             await mySqlPool.query('delete from passwordReset where email = ?', email)
             insertRecord("passwordReset", newData);
             console.log("data upload successfully");
+
             return res.status(200).json({
                 success: true,
                 message: "mail sent successfully"
@@ -268,47 +278,10 @@ const forgetPassword = async (req, res) => {
 }
 
 
-const resetPasswordLoad = async (req, res) => {
-    const token = req.query.token;
-
-    console.log(req.query);
-
-    if (!token) {
-        return res.status(400).json({ message: "Token is required" });
-    }
-
-    const [result] = await mySqlPool.query('select * from passwordReset where token = ? limit 1', token);
-
-    if (result.length > 0) {
-        const email = result[0].email;
-        const phoneNumber = result[0].phoneNumber;
-
-        await mySqlPool.query('select * from users where email = ? AND phoneNumber = ?', email, phoneNumber);
-
-        return res.status(200).json({
-            success: true,
-            message: "Valid token and user found",
-            data: {
-                email: email,
-                phoneNumber: phoneNumber,
-            },
-        });
-
-
-    } else {
-        console.log("Invalid token, no user found");
-        return res.status(401).json({
-            success: false,
-            message: "failed"
-        })
-
-    }
-}
-
-
-
 const resetPassword = async (req, res) => {
     const { token, newPassword } = req.body;
+    console.log(req.body);
+    
 
     try {
         // Validate the token and phone number
@@ -320,7 +293,7 @@ const resetPassword = async (req, res) => {
         if (result.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid token or phone number',
+                message: 'Invalid token',
             });
         }
 
@@ -360,4 +333,4 @@ const logoutUser = () => {
 
 
 
-module.exports = { registerUser, loginUser, logoutUser, verifyEmail, forgetPassword, resetPasswordLoad, resetPassword };
+module.exports = { registerUser, loginUser, logoutUser, verifyEmail, forgetPassword, resetPassword };

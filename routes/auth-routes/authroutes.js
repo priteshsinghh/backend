@@ -1,5 +1,5 @@
 const express = require("express");
-const { registerUser, loginUser, logoutUser, verifyEmail, forgetPassword, resetPasswordLoad, resetPassword } = require("../../controllers/auth/authcontroller");
+const { registerUser, loginUser, logoutUser, verifyEmail, forgetPassword, resetPassword } = require("../../controllers/auth/authcontroller");
 const { addRegisterValidation, addLoginValidation } = require("../../validation/authValidation/authValidation")
 
 const router = express.Router();
@@ -17,7 +17,6 @@ router.post("/logout",logoutUser);
 router.get("/mail-verification", verifyEmail);
 
 router.post("/forget-password", forgetPassword);
-router.get("/reset-password", resetPasswordLoad);
 router.post("/reset-password", resetPassword);
 
 
