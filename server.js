@@ -7,8 +7,6 @@ const mySqlPool = require("./db/db");
 const authRoutes = require("./routes/auth-routes/authroutes");
 const profileRoutes = require("./routes/home/profileroutes");
 
-const adminProductRouter = require("./routes/admin/product-rotes")
-
 
 const PORT = process.env.PORT || 5001;
 
@@ -32,9 +30,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/auth", authRoutes);
-
-
-app.use("/admin/products",adminProductRouter)
 
 app.use("/shop", profileRoutes);
 
