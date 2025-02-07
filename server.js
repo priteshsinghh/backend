@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser")
 const mySqlPool = require("./db/db");
 const authRoutes = require("./routes/auth-routes/authroutes");
 const profileRoutes = require("./routes/home/profileroutes");
+const sellerRoutes = require("./routes/seller/restaurantroutes")
 
 
 const PORT = process.env.PORT || 5001;
@@ -30,8 +31,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/auth", authRoutes);
-
 app.use("/shop", profileRoutes);
+app.use("/seller", sellerRoutes);
 
 
 mySqlPool.query("SELECT 1").then(() => {
