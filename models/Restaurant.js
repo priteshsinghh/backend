@@ -1,7 +1,8 @@
 
 
 const restaurantSchema = `create table if not exists restaurant (
-    restaurantName varchar(255) unique not null,
+    restaurant_id varchar(255) PRIMARY KEY,
+    restaurantName varchar(255) not null,
     description varchar(255) not null,
     address varchar(255),
     contactDetails varchar(255),
