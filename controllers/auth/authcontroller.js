@@ -16,6 +16,8 @@ const { sendMail } = require("../../utils/sqlFunctions");
 
 const registerUser = async (req, res) => {
     const { userName, email, password, phoneNumber, gender, userRole, isVerified } = req.body;
+    console.log(req.body);
+    
 
     try {
         // Hash password

@@ -2,7 +2,7 @@
 
 const express = require("express")
 const { upload } = require("../../helpers/cloudinary");
-const { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem } = require("../../controllers/seller/restaurant-controller");
+const { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem, fetchcategoryById } = require("../../controllers/seller/restaurant-controller");
 
 const router = express.Router();
 
@@ -14,6 +14,7 @@ router.delete("/delete-restaurant", deleteRestaurantById);
 
 
 router.post("/add-category", addCategory);
+router.get("/fetch-category", fetchcategoryById);
 router.post("/add-menuItem", upload.single("image"), addMenuItem);
 
 

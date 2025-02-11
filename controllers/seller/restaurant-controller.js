@@ -49,8 +49,9 @@ const addRestaurant = async (req, res) => {
         };
 
         await createTable(restaurantSchema);
-        const recordExist = await checkRecordExists("restaurant", ["restaurantName", "address"], [restaurantName, address]);
-        if (recordExist) {
+        // const recordExist = await checkRecordExists("restaurant", ["restaurantName", "address"], [restaurantName, address]);
+        const [recordExist] = await db.query("select * from restaurant where restaurantName = ? and address = ?", [restaurantName, address]);
+        if (recordExist.length > 0) {
             return res.status(409).json({
                 success: false,
                 message: "Restaurant already exists"
@@ -101,7 +102,7 @@ const getRestaurants = async (req, res) => {
 const getRestaurantsById = async (req, res) => {
 
     const id = req.query.id;
-    console.log("id:", id);
+    // console.log("id:", id);
 
     try {
 
@@ -128,7 +129,7 @@ const deleteRestaurantById = async (req, res) => {
     try {
 
         const id = req.query.id;
-        console.log(id);
+        // console.log(id);
 
         if (id) {
             await db.query("delete from restaurant where restaurant_id = ?", [id]);
@@ -173,10 +174,8 @@ const addCategory = async (req, res) => {
         }
         await createTable(menuCategoriesSchema);
 
-
-        const recordExist = await checkRecordExists("menu_categories", ["category_id", "name"], [randomstring, name]);
-
-        if (recordExist) {
+        const [recordExist] = await db.query("select * from menu_categories where name= ? and restaurant_id=? ", [name, restaurant_id]);
+        if (recordExist.length > 0) {
             return res.status(409).json({
                 success: false,
                 message: "category Already Exist"
@@ -184,7 +183,7 @@ const addCategory = async (req, res) => {
         }
 
         await insertRecord("menu_categories", newCategory);
-        
+
         res.status(201).json({
             success: true,
             message: "Category added successfully"
@@ -199,6 +198,31 @@ const addCategory = async (req, res) => {
     }
 };
 
+
+const fetchcategoryById = async (req, res) => {
+    try {
+
+        const id = req.query.id;
+        // console.log("id:1",id); 
+
+        const [categories] = await db.query("SELECT * FROM menu_categories where restaurant_id = ?", [id]);
+
+        res.status(200).json({
+            success: true,
+            message: "Reasturant Found Successfully",
+            categories
+        });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "some error occured"
+        })
+
+    }
+}
+
 //  menu item
 const addMenuItem = async (req, res) => {
 
@@ -212,17 +236,28 @@ const addMenuItem = async (req, res) => {
             quantity,
         } = req.body;
 
-        if (!restaurant_id || !category_id || !name || !price || !quantity) {
-            return res.status(400).json({ success: false, message: "Restaurant ID, category ID, item name, and price are required" });
+        console.log(req.body);
+
+        if (!restaurant_id || !category_id || !name || !price) {
+            return res.status(400).json({
+                success: false,
+                message: "Empty fields are not allowed"
+            });
         }
 
-        const image = Buffer.from(req.file.buffer).toString("base64");
-        const imageUrl = `data:${req.file.mimetype};base64,${image}`;
+        let imageUrl = null;
 
-        // Upload image and get the URL
-        const result = await imageUpload(imageUrl);
-        if (!result || !result.url) {
-            throw new Error("Image upload failed: No URL returned.");
+        // Check if an image file is provided in the request
+        if (req.file) {
+            const image = Buffer.from(req.file.buffer).toString("base64");
+            imageUrl = `data:${req.file.mimetype};base64,${image}`;
+
+            // Upload image and get the URL
+            const result = await imageUpload(imageUrl);
+            if (!result || !result.url) {
+                throw new Error("Image upload failed: No URL returned.");
+            }
+            imageUrl = result.url; // Save the URL from the upload
         }
 
         const randomstring = randomString.generate();
@@ -235,14 +270,15 @@ const addMenuItem = async (req, res) => {
             description,
             price,
             quantity,
-            image: result.url
+            image: imageUrl // The image will be null if not provided
         }
 
         await createTable(menuItemSchema);
 
-        const recordExist = await checkRecordExists("menu_items", ["name", "menuItem_id"], [name, randomstring]);
+        // const recordExist = await checkRecordExists("menu_items", ["name", "menuItem_id"], [name, randomstring]);
+        const [recordExist] = await db.query("select * from menu_items where name =? and restaurant_id = ?", [name, restaurant_id]);
 
-        if (recordExist) {
+        if (recordExist.length > 0) {
             return res.status(409).json({
                 success: false,
                 message: "Item is already added"
@@ -267,4 +303,4 @@ const addMenuItem = async (req, res) => {
 
 
 
-module.exports = { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem };
+module.exports = { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem, fetchcategoryById };
