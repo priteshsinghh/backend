@@ -301,6 +301,51 @@ const addMenuItem = async (req, res) => {
 };
 
 
+const fetchMenu = async (req, res) => {
+
+    try {
+        const restaurantId  = req.query.id;
+        console.log(restaurantId);
+
+        if (!restaurantId) {
+            return res.status(400).json({
+                success: false,
+                message: "Restaurant Id not found"
+            })
+        }
+
+        const [categories] = await db.query("select * from menu_categories where restaurant_id = ? ", [restaurantId])
+
+        if (categories.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "found",
+                categories: []
+            })
+        }
+
+        for (const category of categories) {
+            
+            const [menuItems] = await db.query("select * from menu_items where category_id = ? ",[category.category_id]);
+            category.menu_items = menuItems;
+        }
+        return res.status(200).json({
+            success: true,
+            message: "Found Menu",
+            categories
+        })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Some error occured"
+        })
+
+    }
+}
 
 
-module.exports = { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem, fetchcategoryById };
+
+
+module.exports = { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem, fetchcategoryById, fetchMenu };
