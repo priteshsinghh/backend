@@ -276,7 +276,7 @@ const addMenuItem = async (req, res) => {
         await createTable(menuItemSchema);
 
         // const recordExist = await checkRecordExists("menu_items", ["name", "menuItem_id"], [name, randomstring]);
-        const [recordExist] = await db.query("select * from menu_items where name =? and restaurant_id = ?", [name, restaurant_id]);
+        const [recordExist] = await db.query("select * from menu_items where name =? and category_id = ?", [name, category_id]);
 
         if (recordExist.length > 0) {
             return res.status(409).json({
@@ -304,8 +304,8 @@ const addMenuItem = async (req, res) => {
 const fetchMenu = async (req, res) => {
 
     try {
-        const restaurantId  = req.query.id;
-        console.log(restaurantId);
+        const restaurantId = req.query.id;
+        // const {restaurantId} = req.body;
 
         if (!restaurantId) {
             return res.status(400).json({
@@ -325,8 +325,8 @@ const fetchMenu = async (req, res) => {
         }
 
         for (const category of categories) {
-            
-            const [menuItems] = await db.query("select * from menu_items where category_id = ? ",[category.category_id]);
+
+            const [menuItems] = await db.query("select * from menu_items where category_id = ? ", [category.category_id]);
             category.menu_items = menuItems;
         }
         return res.status(200).json({
@@ -346,6 +346,84 @@ const fetchMenu = async (req, res) => {
 }
 
 
+const editMenu = async (req, res) => {
+    try {
+
+        const id = req.query.id;
+
+        const {
+            name,
+            description,
+            price,
+            quantity
+        } = req.body;
+
+        console.log(id);
 
 
-module.exports = { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem, fetchcategoryById, fetchMenu };
+        let imageUrl = null;
+
+        if (req.file) {
+            const image = Buffer.from(req.file.buffer).toString("base64");
+            imageUrl = `data:${req.file.mimetype};base64,${image}`;
+
+            const result = await imageUpload(imageUrl);
+            if (!result || !result.url) {
+                throw new Error("Image upload failed: No URL returned.");
+            }
+            imageUrl = result.url; // Save the URL from the upload
+        }
+
+        const [categories] = await db.query("select * from menu_categories where restaurant_id = ? ", [id])
+
+        if (categories.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "found",
+                categories: []
+            })
+        }
+        // console.log(categories);
+
+        for (const category of categories) {
+
+            console.log("category id", category.menuItems);
+            
+
+            // const [recordExist] = await db.query("select * from menu_items where name = ? and category_id != ? ", [name, category.menuItems]);
+
+            // if(recordExist){
+            //     return res.status(409).json({
+            //         success: false,
+            //         message: "Record already exist"
+            //     })
+            // }
+            
+            const [menuItems] = await db.query("update menu_items set name = ?, description = ?, price = ?, quantity = ?, image = ? where category_id = ? ", [name, description, price, quantity, imageUrl, category.category_id]);
+            category.menu_items = menuItems;
+
+
+            const [items] = await db.query("select * from menu_items where category_id = ?", category.category_id);
+            console.log(items);
+            category.menu_items = items;
+        }
+        return res.status(200).json({
+            success: true,
+            message: "Menu Edited Successfully",
+            categories
+        })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Some Error Occured"
+        })
+
+    }
+}
+
+
+
+
+module.exports = { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem, fetchcategoryById, fetchMenu, editMenu };
