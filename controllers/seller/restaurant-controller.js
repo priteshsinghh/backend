@@ -346,82 +346,161 @@ const fetchMenu = async (req, res) => {
 }
 
 
+// const editMenu = async (req, res) => {
+//     try {
+//         const id = req.query.id; 
+//         const [{ name, description, price, quantity, menuItem_id }] = req.body;
+//         console.log(req.body);
+
+
+//         if (!name || !description || !price ) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "All fields are required"
+//             });
+//         }
+
+//         // Handle Image Upload
+//         let imageUrl = null;
+//         if (req.file) {
+//             const image = Buffer.from(req.file.buffer).toString("base64");
+//             imageUrl = `data:${req.file.mimetype};base64,${image}`;
+
+//             // Upload the image and retrieve the URL
+//             const result = await imageUpload(imageUrl);
+//             if (!result || !result.url) {
+//                 return res.status(500).json({
+//                     success: false,
+//                     message: "Image upload failed"
+//                 });
+//             }
+//             imageUrl = result.url; // Store the URL
+//         }
+
+//         // Check if the item already exists
+//         const [record] = await db.query("SELECT * FROM menu_items WHERE category_id = ?", [name, id]);
+//         if (record.length > 0) {
+//             return res.status(409).json({
+//                 success: false,
+//                 message: "Item already exists in the category"
+//             });
+//         }
+
+//         // Update the menu item
+//         const [menuItems] = await db.query(
+//             "UPDATE menu_items SET name = ?, description = ?, price = ?, quantity = ?, image = ? WHERE category_id = ? AND menuItem_id = ?",
+//             [name, description, price, quantity, imageUrl, id, menuItem_id]  // Add the item name to prevent updating wrong rows
+//         );
+
+//         // Check if any rows were affected
+//         if (menuItems.affectedRows === 0) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Menu item not found or no changes made"
+//             });
+//         }
+
+//         // Fetch all updated items for the category
+//         const [items] = await db.query("SELECT * FROM menu_items WHERE category_id = ?", [id]);
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Menu edited successfully",
+//             items // Return updated items
+//         });
+
+//     } catch (error) {
+//         console.error(error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "An error occurred while editing the menu"
+//         });
+//     }
+// };
+
+
 const editMenu = async (req, res) => {
     try {
+        const id = req.query.id; // Category ID from query
+        const items = req.body; // Array of menu items to update
 
-        const id = req.query.id;
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No items provided for update"
+            });
+        }
 
-        const {
-            name,
-            description,
-            price,
-            quantity
-        } = req.body;
+        // Iterate through the items array and process each item
+        for (const item of items) {
+            const { name, description, price, quantity, menuItem_id } = item;
+            console.log(item);
 
-        console.log(id);
-
-
-        let imageUrl = null;
-
-        if (req.file) {
-            const image = Buffer.from(req.file.buffer).toString("base64");
-            imageUrl = `data:${req.file.mimetype};base64,${image}`;
-
-            const result = await imageUpload(imageUrl);
-            if (!result || !result.url) {
-                throw new Error("Image upload failed: No URL returned.");
+            if (!name || !description || !price) {
+                return res.status(400).json({
+                    success: false,
+                    message: "All fields (name, description, price) are required"
+                });
             }
-            imageUrl = result.url; // Save the URL from the upload
-        }
 
-        const [categories] = await db.query("select * from menu_categories where restaurant_id = ? ", [id])
+            // Handle Image Upload
+            let imageUrl = null;
+            if (req.files && req.files[menuItem_id]) {
+                const image = Buffer.from(req.files[menuItem_id].buffer).toString("base64");
+                imageUrl = `data:${req.files[menuItem_id].mimetype};base64,${image}`;
 
-        if (categories.length === 0) {
-            return res.status(200).json({
-                success: true,
-                message: "found",
-                categories: []
-            })
-        }
-        // console.log(categories);
+                // Upload the image and retrieve the URL
+                const result = await imageUpload(imageUrl);
+                if (!result || !result.url) {
+                    return res.status(500).json({
+                        success: false,
+                        message: "Image upload failed"
+                    });
+                }
+                imageUrl = result.url; // Store the URL
+            }
 
-        for (const category of categories) {
-
-            console.log("category id", category.menuItems);
-            
-
-            // const [recordExist] = await db.query("select * from menu_items where name = ? and category_id != ? ", [name, category.menuItems]);
-
-            // if(recordExist){
+            // Check if the item already exists in the category
+            // const [record] = await db.query("SELECT * FROM menu_items WHERE category_id = ? AND name = ?", [id, name]);
+            // if (record.length > 0) {
             //     return res.status(409).json({
             //         success: false,
-            //         message: "Record already exist"
-            //     })
+            //         message: `Item with name '${name}' already exists in the category`
+            //     });
             // }
-            
-            const [menuItems] = await db.query("update menu_items set name = ?, description = ?, price = ?, quantity = ?, image = ? where category_id = ? ", [name, description, price, quantity, imageUrl, category.category_id]);
-            category.menu_items = menuItems;
 
+            // Update the menu item
+            const [menuItems] = await db.query(
+                "UPDATE menu_items SET name = ?, description = ?, price = ?, quantity = ?, image = ? WHERE category_id = ? AND menuItem_id = ?",
+                [name, description, price, quantity, imageUrl, id, menuItem_id]  // Add the item name to prevent updating wrong rows
+            );
 
-            const [items] = await db.query("select * from menu_items where category_id = ?", category.category_id);
-            console.log(items);
-            category.menu_items = items;
+            // Check if any rows were affected
+            if (menuItems.affectedRows === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: `Menu item with ID ${menuItem_id} not found or no changes made`
+                });
+            }
         }
+
+        // Fetch all updated items for the category
+        const [itemsUpdated] = await db.query("SELECT * FROM menu_items WHERE category_id = ?", [id]);
+
         return res.status(200).json({
             success: true,
-            message: "Menu Edited Successfully",
-            categories
-        })
+            message: "Menu updated successfully",
+            items: itemsUpdated // Return updated items
+        });
 
     } catch (error) {
-        console.log(error);
+        console.error(error);
         return res.status(500).json({
             success: false,
-            message: "Some Error Occured"
-        })
-
+            message: "An error occurred while editing the menu"
+        });
     }
-}
+};
 
 
 
