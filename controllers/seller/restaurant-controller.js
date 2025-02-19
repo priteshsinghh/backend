@@ -223,6 +223,32 @@ const fetchcategoryById = async (req, res) => {
     }
 }
 
+const deleteMenuCategory = async (req, res) => {
+    try {
+
+        const id = req.query.id;
+        console.log(id);
+
+        await db.query("delete from menu_categories where category_id = ?", [id]);
+
+        return res.status(200).json({
+            success: true,
+            message: "Category Deleted Successfully"
+        })
+
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: true,
+            message: "Some Error Occured"
+        })
+
+    }
+}
+
+
+
 //  menu item
 const addMenuItem = async (req, res) => {
 
@@ -346,140 +372,62 @@ const fetchMenu = async (req, res) => {
 }
 
 
-// const editMenu = async (req, res) => {
-//     try {
-//         const id = req.query.id; 
-//         const [{ name, description, price, quantity, menuItem_id }] = req.body;
-//         console.log(req.body);
-
-
-//         if (!name || !description || !price ) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "All fields are required"
-//             });
-//         }
-
-//         // Handle Image Upload
-//         let imageUrl = null;
-//         if (req.file) {
-//             const image = Buffer.from(req.file.buffer).toString("base64");
-//             imageUrl = `data:${req.file.mimetype};base64,${image}`;
-
-//             // Upload the image and retrieve the URL
-//             const result = await imageUpload(imageUrl);
-//             if (!result || !result.url) {
-//                 return res.status(500).json({
-//                     success: false,
-//                     message: "Image upload failed"
-//                 });
-//             }
-//             imageUrl = result.url; // Store the URL
-//         }
-
-//         // Check if the item already exists
-//         const [record] = await db.query("SELECT * FROM menu_items WHERE category_id = ?", [name, id]);
-//         if (record.length > 0) {
-//             return res.status(409).json({
-//                 success: false,
-//                 message: "Item already exists in the category"
-//             });
-//         }
-
-//         // Update the menu item
-//         const [menuItems] = await db.query(
-//             "UPDATE menu_items SET name = ?, description = ?, price = ?, quantity = ?, image = ? WHERE category_id = ? AND menuItem_id = ?",
-//             [name, description, price, quantity, imageUrl, id, menuItem_id]  // Add the item name to prevent updating wrong rows
-//         );
-
-//         // Check if any rows were affected
-//         if (menuItems.affectedRows === 0) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Menu item not found or no changes made"
-//             });
-//         }
-
-//         // Fetch all updated items for the category
-//         const [items] = await db.query("SELECT * FROM menu_items WHERE category_id = ?", [id]);
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Menu edited successfully",
-//             items // Return updated items
-//         });
-
-//     } catch (error) {
-//         console.error(error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "An error occurred while editing the menu"
-//         });
-//     }
-// };
-
 
 const editMenu = async (req, res) => {
-    try {
-        const id = req.query.id; // Category ID from query
-        const items = req.body; // Array of menu items to update
 
-        if (!Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: "No items provided for update"
-            });
+    console.log("received files", req.file);
+    console.log("received body", req.body);
+    
+    try {
+        const id = req.body.id; // Category ID from request body
+        console.log(id);
+        
+
+        if (!id) {
+            return res.status(400).json({ success: false, message: "Category ID is required" });
         }
 
-        // Iterate through the items array and process each item
+        const items = Object.values(req.body.menuItems); // Convert from string to array
+        
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: "No menu items provided" });
+        }
+
         for (const item of items) {
             const { name, description, price, quantity, menuItem_id } = item;
-            console.log(item);
 
             if (!name || !description || !price) {
                 return res.status(400).json({
                     success: false,
-                    message: "All fields (name, description, price) are required"
+                    message: "All fields (name, description, price) are required",
                 });
             }
 
             // Handle Image Upload
-            let imageUrl = null;
-            if (req.files && req.files[menuItem_id]) {
-                const image = Buffer.from(req.files[menuItem_id].buffer).toString("base64");
-                imageUrl = `data:${req.files[menuItem_id].mimetype};base64,${image}`;
+            let imageUrl = item.image;
 
-                // Upload the image and retrieve the URL
-                const result = await imageUpload(imageUrl);
+            // If file was uploaded, process it
+            if (req.file) {
+                const image = Buffer.from(req.file.buffer).toString("base64");
+                const result = await imageUpload(`data:${req.file.mimetype};base64,${image}`);
+
                 if (!result || !result.url) {
-                    return res.status(500).json({
-                        success: false,
-                        message: "Image upload failed"
-                    });
+                    throw new Error("Image upload failed: No URL returned.");
                 }
-                imageUrl = result.url; // Store the URL
+
+                imageUrl = result.url;
             }
 
-            // Check if the item already exists in the category
-            // const [record] = await db.query("SELECT * FROM menu_items WHERE category_id = ? AND name = ?", [id, name]);
-            // if (record.length > 0) {
-            //     return res.status(409).json({
-            //         success: false,
-            //         message: `Item with name '${name}' already exists in the category`
-            //     });
-            // }
-
-            // Update the menu item
+            // Update the menu item in the database
             const [menuItems] = await db.query(
                 "UPDATE menu_items SET name = ?, description = ?, price = ?, quantity = ?, image = ? WHERE category_id = ? AND menuItem_id = ?",
-                [name, description, price, quantity, imageUrl, id, menuItem_id]  // Add the item name to prevent updating wrong rows
+                [name, description, price, quantity, imageUrl, id, menuItem_id]
             );
 
-            // Check if any rows were affected
             if (menuItems.affectedRows === 0) {
                 return res.status(404).json({
                     success: false,
-                    message: `Menu item with ID ${menuItem_id} not found or no changes made`
+                    message: `Menu item with ID ${menuItem_id} not found or no changes made`,
                 });
             }
         }
@@ -490,19 +438,43 @@ const editMenu = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Menu updated successfully",
-            items: itemsUpdated // Return updated items
+            items: itemsUpdated,
         });
-
     } catch (error) {
         console.error(error);
         return res.status(500).json({
             success: false,
-            message: "An error occurred while editing the menu"
+            message: "An error occurred while editing the menu",
         });
     }
 };
 
 
 
+const deleteMenuItem = async (req, res) => {
+    try {
 
-module.exports = { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem, fetchcategoryById, fetchMenu, editMenu };
+        const menuItem_id = req.query.id;
+        console.log(menuItem_id);
+
+        await db.query("delete from menu_items where menuItem_id = ?", [menuItem_id]);
+
+        return res.status(200).json({
+            success: true,
+            message: "Menu Item Deleted Successfully"
+        })
+
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).josn({
+            success: true,
+            message: "Some Error Occured"
+        })
+
+    }
+}
+
+
+
+module.exports = { addRestaurant, getRestaurants, getRestaurantsById, deleteRestaurantById, addCategory, addMenuItem, fetchcategoryById, deleteMenuCategory, fetchMenu, editMenu, deleteMenuItem };
