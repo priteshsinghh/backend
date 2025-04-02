@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express")
 const cors = require("cors");
 const cookieParser = require("cookie-parser")
-const mySqlPool = require("./db/db");
+const pool = require("./db/db");
 const authRoutes = require("./routes/auth-routes/authroutes");
 const profileRoutes = require("./routes/home/profileroutes");
 const sellerRoutes = require("./routes/seller/restaurantroutes")
@@ -35,14 +35,11 @@ app.use("/shop", profileRoutes);
 app.use("/seller", sellerRoutes);
 
 
-mySqlPool.query("SELECT 1").then(() => {
-
-    //db connection
+pool.query("SELECT 1").then(() => {
     console.log("Database connected successfully");
-
     app.listen(PORT, () => console.log(`server is running on port ${PORT}`));
 }).catch((error) => {
-    console.log("DB Connection Fail")
+    console.error("DB Connection Fail", error)
 
 });
 
