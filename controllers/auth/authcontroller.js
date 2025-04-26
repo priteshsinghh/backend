@@ -27,7 +27,10 @@ const registerUser = async (req, res) => {
         const profilePic = Buffer.from(req.file.buffer).toString("base64");
         const url = "data:" + req.file.mimetype + ";base64," + profilePic;
 
+        const randomstring = randomstring.generate();
+
         const newUser = {
+            user_id: randomstring,
             userName,
             email,
             password: hashPassword,
