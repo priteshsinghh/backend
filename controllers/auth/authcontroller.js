@@ -27,10 +27,10 @@ const registerUser = async (req, res) => {
         const profilePic = Buffer.from(req.file.buffer).toString("base64");
         const url = "data:" + req.file.mimetype + ";base64," + profilePic;
 
-        const randomstring = randomstring.generate();
+        const randomString = randomstring.generate();
 
         const newUser = {
-            user_id: randomstring,
+            user_id: randomString,
             userName,
             email,
             password: hashPassword,
@@ -66,7 +66,7 @@ const registerUser = async (req, res) => {
         const mailSubject = "Verification Mail";
         const randomToken = jwt.sign({ email }, 'CLIENT_SECRET_KEY', { expiresIn: '1m' })
 
-        const content = 'Hello ' + userName + ', Please Click <a href="http://localhost:5173/auth/mail-verification?token=' + randomToken + '&phoneNumber=' + phoneNumber + '">Verify</a> to verify your email'
+        const content = 'Hello ' + userName + ', Please Click <a href="http://localhost:3001/auth/mail-verification?token=' + randomToken + '&phoneNumber=' + phoneNumber + '">Verify</a> to verify your email'
 
         sendMail(email, mailSubject, content);
 
@@ -103,7 +103,7 @@ const loginUser = async (req, res) => {
                 const mailSubject = "Verification Mail";
                 const randomToken = jwt.sign({ email }, 'CLIENT_SECRET_KEY', { expiresIn: '10m' })
 
-                const content = 'Hello ' + existingUser.userName + ', Please Click <a href="http://localhost:5173/auth/mail-verification?token=' + randomToken + '&phoneNumber=' + phoneNumber + '">Verify</a> to verify your email'
+                const content = 'Hello ' + existingUser.userName + ', Please Click <a href="http://localhost:3001/auth/mail-verification?token=' + randomToken + '&phoneNumber=' + phoneNumber + '">Verify</a> to verify your email'
 
                 sendMail(email, mailSubject, content);
 
@@ -249,7 +249,7 @@ const forgetPassword = async (req, res) => {
 
             const userName = result[0].userName;
             const mailSubject = "Password reset";
-            const content = 'Hello ' + userName + ', Please <a href="http://localhost:5173/auth/reset-password?token=' + randomString + '">Click Here</a> to reset your password'
+            const content = 'Hello ' + userName + ', Please <a href="http://localhost:3001/auth/reset-password?token=' + randomString + '">Click Here</a> to reset your password'
 
             sendMail(email, mailSubject, content);
 
